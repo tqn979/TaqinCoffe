@@ -1,0 +1,258 @@
+<?php
+session_start();
+
+// Jika sudah login, langsung ke dashboard
+if (isset($_SESSION['user_email'])) {
+    header('Location: form_kasir_sederhana.php'); exit;
+}
+
+$dirData  = __DIR__ . '/data';
+$fileUser = $dirData . '/users.txt';
+
+$msg = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = isset($_POST['email']) ? strtolower(trim($_POST['email'])) : '';
+    $pass  = isset($_POST['password']) ? $_POST['password'] : '';
+
+    if ($email === '' || $pass === '') {
+        $msg = 'Email dan password wajib diisi.';
+    } else {
+        $found = false; $nama = ''; $hash = '';
+        if (file_exists($fileUser)) {
+            $fh = fopen($fileUser, 'r');
+            if ($fh) {
+                while (($line = fgets($fh)) !== false) {
+                    $line = trim($line);
+                    if ($line === '') continue;
+                    $parts = explode(';', $line);
+                    if (count($parts) < 3) continue;
+                    list($e, $n, $h) = $parts;
+                    if ($e === $email) { $found = true; $nama = $n; $hash = $h; break; }
+                }
+                fclose($fh);
+            }
+        }
+
+        if (!$found) {
+            $msg = 'Akun tidak ditemukan.';
+        } elseif (!password_verify($pass, $hash)) {
+            $msg = 'Password salah.';
+        } else {
+            // sukses
+            $_SESSION['user_email'] = $email;
+            $_SESSION['user_name']  = $nama;
+            header('Location: dashboard.php'); exit;
+        }
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - CoffeeShop</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d1810 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('https://images.unsplash.com/photo-1511920170033-f8396924c348?w=1200') center/cover;
+      opacity: 0.15;
+      z-index: 0;
+    }
+
+    .login-container {
+      position: relative;
+      z-index: 1;
+      background: rgba(20, 20, 20, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 50px 45px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      width: 100%;
+      max-width: 420px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+
+    .login-header h2 {
+      color: #fff;
+      font-size: 32px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .login-header p {
+      color: #c49b63;
+      font-size: 15px;
+      font-weight: 400;
+    }
+
+    .alert {
+      background: rgba(220, 53, 69, 0.15);
+      border: 1px solid rgba(220, 53, 69, 0.3);
+      color: #ff6b6b;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    .form-group label {
+      display: block;
+      color: #d4d4d4;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 14px 18px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 15px;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: #c49b63;
+      box-shadow: 0 0 0 3px rgba(196, 155, 99, 0.1);
+    }
+
+    .form-group input::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #c49b63 0%, #b8864f 100%);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+      box-shadow: 0 4px 15px rgba(196, 155, 99, 0.3);
+    }
+
+    .btn-login:hover {
+      background: linear-gradient(135deg, #d4ab73 0%, #c49b63 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(196, 155, 99, 0.4);
+    }
+
+    .btn-login:active {
+      transform: translateY(0);
+    }
+
+    .register-link {
+      text-align: center;
+      margin-top: 25px;
+      padding-top: 25px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .register-link a {
+      color: #c49b63;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+
+    .register-link a:hover {
+      color: #d4ab73;
+      text-decoration: underline;
+    }
+
+    .coffee-icon {
+      text-align: center;
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 35px 25px;
+        margin: 20px;
+      }
+
+      .login-header h2 {
+        font-size: 26px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="coffee-icon">☕</div>
+    
+    <div class="login-header">
+      <h2>Welcome Back</h2>
+      <p>Login Karyawan CoffeeShop</p>
+    </div>
+
+    <?php if ($msg !== ''): ?>
+      <div class="alert">
+        <?php echo htmlspecialchars($msg); ?>
+      </div>
+    <?php endif; ?>
+
+    <form method="POST" action="login.php" autocomplete="off">
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" placeholder="nama@email.com" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Masukkan password" required>
+      </div>
+
+      <button type="submit" class="btn-login">Masuk</button>
+
+      <div class="register-link">
+        <a href="register.php">Belum punya akun? Daftar sekarang →</a>
+      </div>
+    </form>
+  </div>
+</body>
+</html>
